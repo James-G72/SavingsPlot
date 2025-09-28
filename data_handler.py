@@ -3,11 +3,11 @@ import datetime as dt
 import os
 import csv
 
-ACCOUNT_TYPES = ["Current",
-                 "Debit",
-                 "Savings",
-                 "Credit",
-                 "Mortgage"]
+ACCOUNT_TYPES = ["current",
+                 "debit",
+                 "savings",
+                 "credit",
+                 "mortgage"]
 # List of date formats to expect. This is used to avoid confusion for d-m and m-d formatting
 CHECK_DATE_FORMATS = ["%d-%m-%y",
                       "%d-%b-%y",
@@ -25,14 +25,23 @@ class BankAccount(object):
         :param account_type: Type of bank account from ACCOUNT_TYPES.
         :param currency: Currency to be associated with any values.
         """
-        assert account_type in ACCOUNT_TYPES, (f"Invalid account type {account_type} passed for {account_name}./"
+        assert account_type.lower() in ACCOUNT_TYPES, (f"Invalid account type {account_type} passed for {account_name}./"
                                                f"Account types must be from: {ACCOUNT_TYPES}")
-        self.name = account_name
-        self.type = account_type
+        self.name = account_name.title()
+        self.type = account_type.title()
         self.currency = currency
 
         # Historical values over time are stored in a dictionary
         self.history = {}
+
+    def _interpolate_value(self, date):
+        """
+        Interpolate the bank account value at a given date.
+        :param date: Datetime object for the requested date
+        :return: Value at date
+        """
+        # TODO implement a rational interpolation function
+        t = 1
 
     def get_value_on_date(self, date, interp=False):
         """
@@ -42,9 +51,14 @@ class BankAccount(object):
         :param interp: If the date is not preset, should one be interpolated.
         :return: value on the date
         """
-        #TODO once storage structure is defined, fill in the entry retrieval function
-
-        return None
+        if not interp and date.strftime(OUTPUT_DATE_FORMAT) not in self.history.keys():
+            return ""
+        elif interp and date.strftime(OUTPUT_DATE_FORMAT) not in self.history.keys():
+            return self._interpolate_value(date)
+        elif date.strftime(OUTPUT_DATE_FORMAT) in self.history.keys():
+            return self.history[date.strftime(OUTPUT_DATE_FORMAT)]
+        else:
+            return None
 
     def add_entry(self, value, date):
         """
@@ -158,6 +172,19 @@ class Context(object):
             (max(self.all_dates) - min(self.all_dates)).days/365))
         print("")
 
+    def date_report(self, date, interp=False):
+        """
+        Report the status of all bank accounts on a given date.
+        :param date:
+        :param interp: If the date is not preset, should one be interpolated.
+        :return:
+        """
+        print(f"Reporting all bank accounts for {date.strftime(OUTPUT_DATE_FORMAT)}:")
+        for n, _bc in self.all_accounts.items():
+            v = _bc.get_value_on_date(date)
+            t = _bc.type
+            # TODO use padding to make this neat
+            print(f"    {n} ({t}) - £{v}")
 
     def full_report(self):
         """
@@ -201,6 +228,7 @@ class Context(object):
             return
 
         # Prepare the rows for the csv output
+        # TODO make sure that the dates are in chronological order
         dates_out = [dt.datetime.strftime(x, OUTPUT_DATE_FORMAT) for x in self.all_dates]
         rows_out = {}
         for key in self.all_accounts.keys():

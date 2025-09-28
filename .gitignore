@@ -1,2 +1,4 @@
 # Esuring the actual data doesn't get uploaded to git
 files/latest_data.csv
+.idea/
+__pycache__/

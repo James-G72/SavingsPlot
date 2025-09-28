@@ -1,5 +1,7 @@
 import argparse
 import os
+import datetime as dt
+from ast import literal_eval
 
 from data_handler import BankAccount,Context,ACCOUNT_TYPES,OUTPUT_DATE_FORMAT
 
@@ -61,14 +63,15 @@ def edit_context(context):
         EDIT_FUNCTIONS[int(resp)-1](context)
 
         # Do we want to do anything else?
-        resp = validate_user_input("\nDo you want to make any other edits? (y/n): ", ["y", "n"])
+        resp = validate_user_input_list("\nDo you want to make any other edits in this session? (y/n): ",
+                                        ["y","n"])
         if resp.lower() == "n":
             break
 
     return context
 
 
-def validate_user_input(question, reference_answers, exact=False):
+def validate_user_input_list(question, reference_answers, exact=False):
     """
     A function to wrap the process of checking user inputs against a set of acceptable answers.
     :param question: String to be presented to the user.
@@ -76,6 +79,9 @@ def validate_user_input(question, reference_answers, exact=False):
     :param exact: If True, then the match must be case-sensitive.
     :return: Validated User response.
     """
+    if not isinstance(reference_answers, list):
+        reference_answers = [reference_answers]
+
     while True:
         question_resp = input(question)
         if exact and question_resp in reference_answers:
@@ -84,6 +90,38 @@ def validate_user_input(question, reference_answers, exact=False):
             break
         else:
             print(f"Response '{question_resp}' invalid. Please enter {' , '.join(reference_answers[:-1])} or {reference_answers[-1]}. Retrying.")
+
+    return question_resp
+
+
+def validate_user_input_types(question, types):
+    """
+    A function to wrap the process of checking user inputs against a set of acceptable types.
+    :param question: String to be presented to the user.
+    :param types: List of allowable string responses.
+    :return: Validated User response.
+    """
+    def _get_type(input_string):
+        """
+        A function to return all types I might care about
+        :param input_string: String from user to evaluate
+        :return: type assessment
+        """
+        try:
+            return type(literal_eval(input_string))
+        except (ValueError, SyntaxError):
+            # Caught exceptions mean a string.
+            return str
+
+    if not isinstance(types, list):
+        types = [types]
+
+    while True:
+        question_resp = input(question)
+        if any([_get_type(question_resp) == x for x in types]):
+            break
+        else:
+            print(f"Response '{question_resp}' not a valid type. Please enter {' , '.join(types[:-1])} or {types[-1]}. Retrying.")
 
     return question_resp
 
@@ -97,7 +135,7 @@ def double_check_user_input(question):
     while True:
         question_resp = input(question)
         print(f"You have entered: {question_resp}")
-        check_resp = validate_user_input("Is that correct? (y/n): ", ["y", "n"], exact=False)
+        check_resp = validate_user_input_list("Is that correct? (y/n): ",["y","n"],exact=False)
         if check_resp.lower() == "y":
             break
 
@@ -114,15 +152,16 @@ def _add_account(c):
     while True:
         account_name = double_check_user_input("What is the name of the account to be added?: ")
 
-        account_type = validate_user_input("What type of account is it?: ", ACCOUNT_TYPES)
+        account_type = validate_user_input_list("What type of account is it?: ",ACCOUNT_TYPES)
 
         _bc = BankAccount(account_name, account_type)
         # Get a value for the account for all dates
 
         for date in c.all_dates:
             while True:
-                value_resp = input(f"What was the value of {account_name} on {date.strftime(OUTPUT_DATE_FORMAT)}?: ")
-                if not value_resp.isdigit():
+                value_resp = input(f"What was the value of {account_name} on {date.strftime(OUTPUT_DATE_FORMAT)}? "
+                                   f"(if account was not active at that time, just hit enter): ")
+                if not value_resp.isdigit() and value_resp != "":
                     print(f"{value_resp} is not a valid account value. Retrying")
                 else:
                     break
@@ -132,13 +171,15 @@ def _add_account(c):
         # Confirm the account is acceptable with the user
         print(f"Please check the values and dates for {account_name}:")
         _bc.print_status()
-        check_resp = validate_user_input("\nDo you want to make any other edits? (y/n): ", ["y", "n"])
+        check_resp = validate_user_input_list("\nAre the above details correct? (y/n): ",["y","n"])
         if check_resp.lower() == "y":
             c.add_account(_bc)
             print(f"    New account: {account_name} added successfully.")
             break
         else:
             print("Please re-enter the details.")
+
+    return c
 
 
 def _add_date(c):
@@ -148,8 +189,37 @@ def _add_date(c):
     :return: edited Context object
     """
     print("   ---  Add a Date  ---\n")
+    while True:
+        while True:
+            new_date_str = double_check_user_input("What is the date to be added? (please use format 01-Jan-1990: ")
+            try:
+                new_date = dt.datetime.strptime(new_date_str, OUTPUT_DATE_FORMAT)
+                break
+            except:
+                print(f"{new_date_str} cannot be passed using datetime format {OUTPUT_DATE_FORMAT}. Retrying")
 
+        # Iterate through all bank accounts to add a value for that date
+        temp_value_store = {}
+        for bc_name in c.all_accounts.keys():
+            bc_value = validate_user_input_types(f"What was the value of {bc_name} on {new_date_str}?: ",
+                                                 [int, float, str])
+            temp_value_store[bc_name] = bc_value
 
+        print(f"Please check the values and dates for {new_date_str}:")
+        for n, v in temp_value_store.items():
+            print(f"    {n} ({c.all_accounts[n].type}) - £{v}")
+        check_resp = validate_user_input_list("\nAre the above details correct? (y/n): ",["y","n"])
+        if check_resp.lower() == "y":
+            # TODO Unless something changes, we will want to move the 3 lines below into a Context function to ensure date is appended.
+            for bc_name in c.all_accounts.keys():
+                c.all_accounts[bc_name].add_entry(temp_value_store[bc_name], new_date)
+            c.all_dates.append(new_date)
+            print(f"\nNew date: {new_date_str} added successfully.")
+            break
+        else:
+            print("Please re-enter the details.")
+
+    return c
 
 
 def _remove_account(c):
@@ -215,7 +285,7 @@ def main(args):
         fullContext = edit_context(fullContext)
 
     # Exit by saving to the file
-    exit_programme(fullContext, file_path, overwrite_save=False)
+    exit_programme(fullContext, file_path, overwrite_save=True)
 
 
 if __name__ == "__main__":
