@@ -35,13 +35,89 @@ def initialise_context(target_file):
 
 def edit_context(context):
     """
-    Allow for the Context instance to be manually edited by the user on run_time.
+    Allow for the Context instance to be manually edited by the user on run_time
     :param context: Context object to be edited.
     :return: Updated Context object.
     """
-    # TODO work out how best to make it editable
+    while True:
+        print("   ---   Edit Mode  ---")
+        while True:
+            print("You have the following options:")
+            # Note that options are displayed starting from 1.
+            for idx, option in enumerate(EDIT_OPTIONS):
+                print(f"    ({idx+1}) - {option}")
+            resp = input("Please select an option using its list number: ")
+            if not resp.isdigit():
+                print(f"    Value '{resp}' is not a digit. Retrying.")
+            elif int(resp) > idx + 1:
+                print(f"    Value {int(resp)} exceeds the list length. Retrying.")
+            elif int(resp) <= 0:
+                print(f"    Value {int(resp)} is negative. Retrying.")
+            else:
+                break
+                # TODO this might need to be thought through more. Else seems weird
+        # Exiting the top loop, we can now perform the edit function selected
+        print("")
+        EDIT_FUNCTIONS[int(resp)-1](context)
+
+        # Do we want to do anything else?
+        print("")
+        while True:
+            resp = input("Do you want to make any other edits? (y/n): ")
+            if resp.lower() not in ["y", "n"]:
+                print(f"Response '{resp}' invalid. Please enter either 'y' or 'n'. Retrying.")
+            else:
+                break
+                # TODO same as above todo, is this sensible to else?
+        if resp.lower() == "n":
+            break
 
     return context
+
+
+def _add_account(c):
+    """
+    Add an entry for a new account, which will attempt to backfill all current dates.
+    :param c: Context object to edit
+    :return: edited Context object
+    """
+    print("   ---  Add an Account  ---")
+
+
+def _add_date(c):
+    """
+    Add an entry for a new date, which will attempt to do this for all accounts.
+    :param c: Context object to edit
+    :return: edited Context object
+    """
+    print("   ---  Add a Date  ---")
+
+
+def _remove_account(c):
+    """
+    Remove an entry for an account.
+    :param c: Context object to edit
+    :return: edited Context object
+    """
+    print("   ---  Remove an Account  ---")
+
+
+def _remove_date(c):
+    """
+    Remove an entry for a date. This will be removed from all accounts
+    :param c: Context object to edit
+    :return: edited Context object
+    """
+    print("   ---  Remove a Date  ---")
+
+
+def _edit_single_value(c):
+    """
+    Remove a single entry for a given account, on a given date
+    :param c: Context object to edit
+    :return: edited Context object
+    """
+    print("   ---  Remove a Single Entry  ---")
 
 
 def exit_programme(context, save_path, overwrite_save=False):
@@ -54,6 +130,10 @@ def exit_programme(context, save_path, overwrite_save=False):
     """
     # TODO work out how this function fits in and any additional functionality
     context.save_to_csv(save_path, overwrite_save)
+
+# Defining a list of functions now that they have been created
+EDIT_OPTIONS = ["Add Account", "Add Date", "Remove Account", "Remove Date", "Edit Single Value"]
+EDIT_FUNCTIONS = [_add_account, _add_date, _remove_account, _remove_date, _edit_single_value]
 
 
 def main(args):
@@ -72,11 +152,11 @@ def main(args):
         fullContext.update_from_file(args.target)
     elif args.action == "print":
         fullContext.full_report()
-    elif args.edit:
+    elif args.action == "edit":
         fullContext = edit_context(fullContext)
 
     # Exit by saving to the file
-    exit_programme(fullContext, file_path, overwrite_save=True)
+    exit_programme(fullContext, file_path, overwrite_save=False)
 
 
 if __name__ == "__main__":
