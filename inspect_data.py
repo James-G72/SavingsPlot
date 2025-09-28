@@ -1,10 +1,10 @@
 import argparse
 import os
 
-from data_handler import Context
+from data_handler import BankAccount,Context,ACCOUNT_TYPES,OUTPUT_DATE_FORMAT
 
 DATA_DIRECTORY = os.path.join(os.getcwd(), "files")
-SAVE_FILE_NAME = "latest_data.csv"
+SAVE_FILE_NAME = "test_data.csv"
 
 
 def parse_args():
@@ -61,18 +61,47 @@ def edit_context(context):
         EDIT_FUNCTIONS[int(resp)-1](context)
 
         # Do we want to do anything else?
-        print("")
-        while True:
-            resp = input("Do you want to make any other edits? (y/n): ")
-            if resp.lower() not in ["y", "n"]:
-                print(f"Response '{resp}' invalid. Please enter either 'y' or 'n'. Retrying.")
-            else:
-                break
-                # TODO same as above todo, is this sensible to else?
+        resp = validate_user_input("\nDo you want to make any other edits? (y/n): ", ["y", "n"])
         if resp.lower() == "n":
             break
 
     return context
+
+
+def validate_user_input(question, reference_answers, exact=False):
+    """
+    A function to wrap the process of checking user inputs against a set of acceptable answers.
+    :param question: String to be presented to the user.
+    :param reference_answers: List of allowable string responses.
+    :param exact: If True, then the match must be case-sensitive.
+    :return: Validated User response.
+    """
+    while True:
+        question_resp = input(question)
+        if exact and question_resp in reference_answers:
+            break
+        elif not exact and question_resp.lower() in [x.lower() for x in reference_answers]:
+            break
+        else:
+            print(f"Response '{question_resp}' invalid. Please enter {' , '.join(reference_answers[:-1])} or {reference_answers[-1]}. Retrying.")
+
+    return question_resp
+
+
+def double_check_user_input(question):
+    """
+    A function to wrap the process of repeating the answer back to the User.
+    :param question: String to be presented to the user.
+    :return: string response from the user.
+    """
+    while True:
+        question_resp = input(question)
+        print(f"You have entered: {question_resp}")
+        check_resp = validate_user_input("Is that correct? (y/n): ", ["y", "n"], exact=False)
+        if check_resp.lower() == "y":
+            break
+
+    return question_resp
 
 
 def _add_account(c):
@@ -81,7 +110,35 @@ def _add_account(c):
     :param c: Context object to edit
     :return: edited Context object
     """
-    print("   ---  Add an Account  ---")
+    print("   ---  Add an Account  ---\n")
+    while True:
+        account_name = double_check_user_input("What is the name of the account to be added?: ")
+
+        account_type = validate_user_input("What type of account is it?: ", ACCOUNT_TYPES)
+
+        _bc = BankAccount(account_name, account_type)
+        # Get a value for the account for all dates
+
+        for date in c.all_dates:
+            while True:
+                value_resp = input(f"What was the value of {account_name} on {date.strftime(OUTPUT_DATE_FORMAT)}?: ")
+                if not value_resp.isdigit():
+                    print(f"{value_resp} is not a valid account value. Retrying")
+                else:
+                    break
+            _bc.add_entry(value_resp, date)
+            print(f"Value {value_resp} assigned to {date}")
+
+        # Confirm the account is acceptable with the user
+        print(f"Please check the values and dates for {account_name}:")
+        _bc.print_status()
+        check_resp = validate_user_input("\nDo you want to make any other edits? (y/n): ", ["y", "n"])
+        if check_resp.lower() == "y":
+            c.add_account(_bc)
+            print(f"    New account: {account_name} added successfully.")
+            break
+        else:
+            print("Please re-enter the details.")
 
 
 def _add_date(c):
@@ -90,7 +147,9 @@ def _add_date(c):
     :param c: Context object to edit
     :return: edited Context object
     """
-    print("   ---  Add a Date  ---")
+    print("   ---  Add a Date  ---\n")
+
+
 
 
 def _remove_account(c):
@@ -99,7 +158,7 @@ def _remove_account(c):
     :param c: Context object to edit
     :return: edited Context object
     """
-    print("   ---  Remove an Account  ---")
+    print("   ---  Remove an Account  ---\n")
 
 
 def _remove_date(c):
@@ -108,7 +167,7 @@ def _remove_date(c):
     :param c: Context object to edit
     :return: edited Context object
     """
-    print("   ---  Remove a Date  ---")
+    print("   ---  Remove a Date  ---\n")
 
 
 def _edit_single_value(c):
@@ -117,7 +176,7 @@ def _edit_single_value(c):
     :param c: Context object to edit
     :return: edited Context object
     """
-    print("   ---  Remove a Single Entry  ---")
+    print("   ---  Remove a Single Entry  ---\n")
 
 
 def exit_programme(context, save_path, overwrite_save=False):

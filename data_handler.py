@@ -1,3 +1,4 @@
+import datetime
 import datetime as dt
 import os
 import csv
@@ -52,10 +53,22 @@ class BankAccount(object):
         :param date: Date for the associated value.
         :return: None
         """
-        date_object = handle_date_string(date)
+        if not isinstance(date, datetime.datetime):
+            date_object = handle_date_string(date)
+        else:
+            date_object = date
         date_str = dt.datetime.strftime(date_object, OUTPUT_DATE_FORMAT)
 
         self.history[date_str] = value
+
+    def print_status(self):
+        """
+        Report the intertnal state of the bank account.
+        :return: None
+        """
+        for date in self.history.keys():
+            print(f"    {date} : {self.history[date]}")
+
 
 
 class Context(object):
@@ -113,6 +126,15 @@ class Context(object):
 
             self.all_accounts[account] = _bc
         self.all_dates = [handle_date_string(x)for x in dates]
+
+    def add_account(self, account):
+        """
+        Add an account to the internal store.
+        :param account: BackAccount object
+        :return: None
+        """
+        # TODO I made this a function of the context as we will want to check to see if there are any dates in conflice
+        self.all_accounts[account.name] = account
 
     def test_updated(self):
         if not self.updated_this_run:
