@@ -10,7 +10,7 @@ ACCOUNT_TYPES = ["Current",
 # List of date formats to expect. This is used to avoid confusion for d-m and m-d formatting
 CHECK_DATE_FORMATS = ["%d-%m-%y",
                       "%d-%b-%y",
-                      "%d-%b-%y"]
+                      "%d-%b-%Y"]
 OUTPUT_DATE_FORMAT = "%d-%b-%Y"
 
 class BankAccount(object):
@@ -27,6 +27,7 @@ class BankAccount(object):
         assert account_type in ACCOUNT_TYPES, (f"Invalid account type {account_type} passed for {account_name}./"
                                                f"Account types must be from: {ACCOUNT_TYPES}")
         self.name = account_name
+        self.type = account_type
         self.currency = currency
 
         # Historical values over time are stored in a dictionary
@@ -113,16 +114,6 @@ class Context(object):
             self.all_accounts[account] = _bc
         self.all_dates = [handle_date_string(x)for x in dates]
 
-    def _check_valid_csv(self, filepath):
-        """
-        Check if a csv is of the correct format. Checks in this function define the valid csv format.
-        :param filepath: string to file location
-        :return: bool, True means csv is a valid data source
-        """
-        # TODO need to define csv structure and build import and export functionality
-
-        return False
-
     def test_updated(self):
         if not self.updated_this_run:
             if self.initial_data_state != self.data_state:
@@ -143,6 +134,7 @@ class Context(object):
             dt.datetime.strftime(min(self.all_dates), OUTPUT_DATE_FORMAT),
             dt.datetime.strftime(max(self.all_dates), OUTPUT_DATE_FORMAT),
             (max(self.all_dates) - min(self.all_dates)).days/365))
+        print("")
 
 
     def full_report(self):
@@ -151,27 +143,55 @@ class Context(object):
         :return: None
         """
         # TODO Once we have the internal structure for contexts, work out how to report this to command line
-        t = 1
+        print("Full report isn't implemented yet")
 
-    def update_from_file(self, full_path, overwrite=False):
+    def _build_csv_row(self, account_key, dates):
         """
-        Update the Context to reflect a new file. This is toggled between additive or a fresh start by the overwrite parameter.
-        :param full_path: Full Windows Path to the
-        :param overwrite:
+        A specific function for building the corresponding csv for for an account.
+        This could be simplified by assuming that the order in self.all_dates matches the
+        internal BankAccount object order, but it will be better to explicitly build the row.
+        :param account_key: The name of the account for this row.
+        :param dates: A list of dates that forms the header of the csv.
         :return:
         """
-        # TODO work out if the overwrite functionality is better implemented as just initialising a new context from the main of any script.
+        new_row = []
+        _bc = self.all_accounts[account_key]
+        new_row.append(account_key)
+        new_row.append(_bc.type)
+        for date_str in dates:
+            if date_str in _bc.history.keys():
+                new_row.append(_bc.history[date_str])
+            else:
+                new_row.append("")
 
-        return None
+        return new_row
 
-    def save_to_file(self, full_path, allow_overwrite=False):
+    def save_to_csv(self, full_path, allow_overwrite=False):
         """
         Save the full contents of the context to a csv file.
-        :param full_path:
+        :param full_path: Absolute Windows path to a csv
         :param allow_overwrite: Allow the file to be overwritten if it already exists
         :return: True if saved successfully
         """
-        # TODO work out how is best to build the structure in a csv
+        path_used = os.path.exists(full_path)
+        if path_used and not allow_overwrite:
+            print(f"Cannot save to {full_path} without overwriting.")
+            return
+
+        # Prepare the rows for the csv output
+        dates_out = [dt.datetime.strftime(x, OUTPUT_DATE_FORMAT) for x in self.all_dates]
+        rows_out = {}
+        for key in self.all_accounts.keys():
+            rows_out[key] = self._build_csv_row(key, dates_out)
+
+        try:
+            with open(full_path, "w", newline="") as csv_file:
+                write_out = csv.writer(csv_file, delimiter=",")
+                write_out.writerow(["Account", "Type"] + dates_out)
+                for acc in self.all_accounts.keys():
+                    write_out.writerow(rows_out[acc])
+        except:
+            print(f"Could not write to {full_path}")
 
 
 def handle_date_string(date_str):

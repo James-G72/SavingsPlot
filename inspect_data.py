@@ -53,7 +53,7 @@ def exit_programme(context, save_path, overwrite_save=False):
     :return: None
     """
     # TODO work out how this function fits in and any additional functionality
-    context.save_to_file(save_path, overwrite_save)
+    context.save_to_csv(save_path, overwrite_save)
 
 
 def main(args):
