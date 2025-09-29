@@ -297,6 +297,44 @@ def _edit_single_value(c):
     :return: edited Context object
     """
     print("   ---  Remove a Single Entry  ---\n")
+    while True:
+        print("The bank accounts currently loaded are:")
+        for bc_name in c.all_accounts.keys():
+            print(f"    {bc_name}")
+        target_account = double_check_user_input("Which account would you like to edit?: ")
+        if target_account.lower() in [x.lower() for x in c.all_accounts.keys()]:
+                break
+        else:
+            print(f"{target_account} is not a loaded account. Retrying")
+
+    for name, _bc in c.all_accounts.items():
+        if name.lower() == target_account.lower():
+            # Setting to the direct key name to avoid capitalisation issues
+            target_account = name
+            break
+
+    while True:
+        print(f"The dates currently loaded  for {target_account} are:")
+        for date in c.all_accounts[target_account].history.keys():
+            print(f"    {date}")
+        target_date = double_check_user_input("Which date would you like to edit? (please use format 01-Jan-1990): ")
+        if target_date in c.all_accounts[target_account].history.keys():
+            break
+        else:
+            print(f"{target_date} is not present. Retrying")
+
+    while True:
+        print(f"Current value of {target_account} on {target_date} - {c.all_accounts[target_account].history[target_date]}")
+        new_value = validate_user_input_types("What is the new value: ", [int, float, str])
+        check_resp = validate_user_input_list(f"Overwrite the value {c.all_accounts[target_account].history[target_date]}"
+                                              f" with {new_value}? (y/n): ", ["y", "n"])
+        if check_resp == "y":
+            break
+
+    c.all_accounts[target_account].history[target_date] = new_value
+    print(f"The ew value of {target_account} on {target_date} is {new_value}")
+
+    return c
 
 
 def exit_programme(context, save_path, overwrite_save=False):
