@@ -3,7 +3,7 @@ import os
 import datetime as dt
 from ast import literal_eval
 
-from data_handler import BankAccount, initialise_context
+from data_handler import BankAccount, Context, initialise_context
 from data_handler import ACCOUNT_TYPES, OUTPUT_DATE_FORMAT, DATA_DIRECTORY, SAVE_FILE_NAME
 
 
@@ -321,6 +321,50 @@ def _edit_single_value(c):
     return c
 
 
+def handle_no_file(path):
+    """
+    If there is no data file in existence then one needs to be created:
+    :param path: path where the file was expected to be
+    :return: None
+    """
+    print(f"{path} does not exist.")
+    while True:
+        while True:
+            print("You have the following options:")
+            # Note that options are displayed starting from 1.
+            for idx,option in enumerate(["Create Example csv", "Create Blank .csv"]):
+                print(f"    ({idx + 1}) - {option}")
+            resp = input("Please select an option using its list number: ")
+            if not resp.isdigit():
+                print(f"    Value '{resp}' is not a digit. Retrying.")
+            elif int(resp) > idx + 1:
+                print(f"    Value {int(resp)} exceeds the list length. Retrying.")
+            elif int(resp) <= 0:
+                print(f"    Value {int(resp)} is negative. Retrying.")
+            else:
+                break
+
+        # Create a blank csv for now
+        with open(path, "w") as empty_csv:
+            pass
+
+        if resp == "1":
+            print("Creating an example .csv file.")
+            _c = Context(path, populate=False)
+            dates_in = ["01-Jan-2020", "01-Jan-2021", "01-Jan-2022"]
+            _c.all_dates = [dt.datetime.strptime(x, OUTPUT_DATE_FORMAT) for x in dates_in]
+            for acc_name, acc_type in zip(["A", "B", "C"], ["Current", "Savings", "Credit"]):
+                _bc = BankAccount(acc_name, acc_type)
+                for date in dates_in:
+                    _bc.add_entry(1, date)
+                _c.add_account(_bc)
+            _c.save_to_csv(path, allow_overwrite=True)
+            print(f"{path} created successfully.")
+        elif resp == "2":
+            pass
+        exit()
+
+
 def exit_programme(context, save_path, overwrite_save=False):
     """
     Save stuff maybe
@@ -343,8 +387,12 @@ def main(args):
     :param args: Parseargs executed.
     :return: None
     """
-    os.makedirs(DATA_DIRECTORY, exist_ok=True)
     file_path = os.path.join(DATA_DIRECTORY, SAVE_FILE_NAME)
+    os.makedirs(DATA_DIRECTORY, exist_ok=True)
+
+    if not os.path.exists(file_path):
+        # TODO add handling for the blank file created by the blank file option
+        handle_no_file(file_path)
 
     fullContext = initialise_context(file_path)
 

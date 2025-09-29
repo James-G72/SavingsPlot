@@ -14,7 +14,7 @@ CHECK_DATE_FORMATS = ["%d-%m-%y",
                       "%d-%b-%Y"]
 OUTPUT_DATE_FORMAT = "%d-%b-%Y"
 DATA_DIRECTORY = os.path.join(os.getcwd(), "files")
-SAVE_FILE_NAME = "test_data.csv"
+SAVE_FILE_NAME = "test_data1.csv"
 
 
 class BankAccount(object):
@@ -92,7 +92,7 @@ class Context(object):
     """
     Wrapper for the full programme content at run-time. Handles loading and saving of data.
     """
-    def __init__(self, historical):
+    def __init__(self, historical, populate=True):
         """
         Establish programme context
         :param historical: absolute filepath to a previous data export
@@ -102,9 +102,8 @@ class Context(object):
 
         assert os.path.exists(historical), f"Given historical data filepath ({historical}) does not exist."
         self.all_accounts = {}
-        self._load_historical(historical)
-
-        t = 1
+        if populate:
+            self._load_historical(historical)
 
     def _unpack_csv(self, abs_path):
         """
@@ -150,7 +149,7 @@ class Context(object):
         :param account: BackAccount object
         :return: None
         """
-        # TODO I made this a function of the context as we will want to check to see if there are any dates in conflice
+        # TODO I made this a function of the context as we will want to check to see if there are any dates in conflict
         self.all_accounts[account.name] = account
 
     def test_updated(self):
