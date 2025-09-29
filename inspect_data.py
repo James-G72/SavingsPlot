@@ -3,10 +3,8 @@ import os
 import datetime as dt
 from ast import literal_eval
 
-from data_handler import BankAccount,Context,ACCOUNT_TYPES,OUTPUT_DATE_FORMAT
-
-DATA_DIRECTORY = os.path.join(os.getcwd(), "files")
-SAVE_FILE_NAME = "test_data.csv"
+from data_handler import BankAccount, initialise_context
+from data_handler import ACCOUNT_TYPES, OUTPUT_DATE_FORMAT, DATA_DIRECTORY, SAVE_FILE_NAME
 
 
 def parse_args():
@@ -19,20 +17,6 @@ def parse_args():
     parser.add_argument("-t", "--target", help="The path to a .csv file that contains banking information")
 
     return parser.parse_args()
-
-
-def initialise_context(target_file):
-    """
-    Load an instance of the Context class from the location provided.
-    :param target_file: A csv file with historical bank account data.
-    :return: A Context object to encapsulate the current saved data.
-    """
-    c = Context(target_file)
-
-    # Report to the user the top-level of the context that has just been loaded
-    c.quick_report()
-
-    return c
 
 
 def edit_context(context):
@@ -332,7 +316,7 @@ def _edit_single_value(c):
             break
 
     c.all_accounts[target_account].history[target_date] = new_value
-    print(f"The ew value of {target_account} on {target_date} is {new_value}")
+    print(f"The new value of {target_account} on {target_date} is {new_value}")
 
     return c
 

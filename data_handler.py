@@ -13,6 +13,9 @@ CHECK_DATE_FORMATS = ["%d-%m-%y",
                       "%d-%b-%y",
                       "%d-%b-%Y"]
 OUTPUT_DATE_FORMAT = "%d-%b-%Y"
+DATA_DIRECTORY = os.path.join(os.getcwd(), "files")
+SAVE_FILE_NAME = "test_data.csv"
+
 
 class BankAccount(object):
     """
@@ -261,3 +264,17 @@ def handle_date_string(date_str):
     assert date_obj.date() <= dt.date.today(), f"A date has bee passed that is in the future."
 
     return date_obj
+
+
+def initialise_context(target_file):
+    """
+    Load an instance of the Context class from the location provided.
+    :param target_file: A csv file with historical bank account data.
+    :return: A Context object to encapsulate the current saved data.
+    """
+    c = Context(target_file)
+
+    # Report to the user the top-level of the context that has just been loaded
+    c.quick_report()
+
+    return c
