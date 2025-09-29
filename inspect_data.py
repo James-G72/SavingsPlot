@@ -191,7 +191,7 @@ def _add_date(c):
     print("   ---  Add a Date  ---\n")
     while True:
         while True:
-            new_date_str = double_check_user_input("What is the date to be added? (please use format 01-Jan-1990: ")
+            new_date_str = double_check_user_input("What is the date to be added? (please use format 01-Jan-1990): ")
             try:
                 new_date = dt.datetime.strptime(new_date_str, OUTPUT_DATE_FORMAT)
                 break
@@ -229,6 +229,30 @@ def _remove_account(c):
     :return: edited Context object
     """
     print("   ---  Remove an Account  ---\n")
+    while True:
+        print("The bank accounts currently loaded are:")
+        for bc_name in c.all_accounts.keys():
+            print(f"    {bc_name}")
+        target_account = double_check_user_input("Which account would you like to remove?: ")
+        if target_account.lower() in [x.lower() for x in c.all_accounts.keys()]:
+            check_resp = validate_user_input_list(f"Type 'Delete' to confirm deletion of {target_account}. Type 'Cancel' to abort: ",
+                                        ["delete", "cancel"]).lower()
+            if check_resp.lower() == "delete":
+                break
+            else:
+                print("Aborting.")
+                # Return the context without having made changes
+                return c
+        else:
+            print(f"{target_account} does not exist. Retrying.")
+    # Confirming the key to delete by running the same check as was run to validate the account selection.
+    for key in c.all_accounts.keys():
+        if key.lower() == target_account.lower():
+            del c.all_accounts[key]
+            print(f"{key} deleted.")
+            break
+
+    return c
 
 
 def _remove_date(c):
@@ -238,6 +262,32 @@ def _remove_date(c):
     :return: edited Context object
     """
     print("   ---  Remove a Date  ---\n")
+    while True:
+        print("The dates currently loaded are:")
+        for date in c.all_dates:
+            print(f"    {date.strftime(OUTPUT_DATE_FORMAT)}")
+        target_date = double_check_user_input("Which date would you like to remove? (please use format 01-Jan-1990): ")
+        if target_date in [x.strftime(OUTPUT_DATE_FORMAT) for x in c.all_dates]:
+            check_resp = validate_user_input_list(f"Type 'Delete' to confirm deletion of {target_date}. Type 'Cancel' to abort: ",
+                                        ["delete", "cancel"]).lower()
+            if check_resp.lower() == "delete":
+                break
+            else:
+                print("Aborting.")
+                # Return the context without having made changes
+                return c
+        else:
+            print(f"{target_date} does not exist. Retrying.")
+
+    for bc_name, _bc in c.all_accounts.items():
+        del _bc.history[target_date]
+    for date in c.all_dates:
+        if date.strftime(OUTPUT_DATE_FORMAT) == target_date:
+            c.all_dates.remove(date)
+            break
+    print(f"{target_date} deleted.")
+
+    return c
 
 
 def _edit_single_value(c):
