@@ -92,6 +92,7 @@ class Context(object):
     """
     Wrapper for the full programme content at run-time. Handles loading and saving of data.
     """
+    TOTAL_NAMES = ["Total Money", "Total Worth"]
     def __init__(self, historical, populate=True):
         """
         Establish programme context
@@ -104,6 +105,7 @@ class Context(object):
         self.all_accounts = {}
         if populate:
             self._load_historical(historical)
+        self.totals = {}
 
     def _unpack_csv(self, abs_path):
         """
@@ -245,6 +247,42 @@ class Context(object):
         except:
             print(f"Could not write to {full_path}")
 
+    def generate_totals(self):
+        """
+        Generate fake accounts that represent the total value and worth of accounts
+        :return: None
+        """
+        def _handle_values(str):
+            """
+            Handle the string value returned by an account.
+            :param str: Value in
+            :return: float
+            """
+            if str == "":
+                return 0
+            else:
+                return float(str)
+
+        total_money_bc = BankAccount("Total Money", "Savings")
+        total_worth_bc = BankAccount("Total Worth", "Savings")
+        for date in self.all_dates:
+            pos_value = 0
+            neg_value = 0
+            mortgage_value = 0
+            for _, _bc in self.all_accounts.items():
+                if _bc.type.lower() in ["current", "debit", "savings"]:
+                    pos_value += _handle_values(_bc.get_value_on_date(date))
+                elif _bc.type.lower() == "credit":
+                    neg_value += _handle_values(_bc.get_value_on_date(date))
+                else:
+                    mortgage_value += _handle_values(_bc.get_value_on_date(date))
+
+            total_money_bc.add_entry(pos_value-neg_value, date)
+            total_worth_bc.add_entry(pos_value-neg_value-mortgage_value, date)
+
+        self.totals["Total Money"] = total_money_bc
+        self.totals["Total Worth"] = total_worth_bc
+
 
 def handle_date_string(date_str):
     """
@@ -272,6 +310,7 @@ def initialise_context(target_file):
     :return: A Context object to encapsulate the current saved data.
     """
     c = Context(target_file)
+    c.generate_totals()
 
     # Report to the user the top-level of the context that has just been loaded
     c.quick_report()

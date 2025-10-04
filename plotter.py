@@ -62,12 +62,22 @@ def plot_accounts(c, account_list, dates):
     top_plot_types = ["current", "debit", "savings"]
 
     for bc_name, _bc in c.all_accounts.items():
-        y_axis = [_get_single_value(_bc, date) for date in dates]
-        datenums = md.date2num([date.date() for date in dates])
-        if _bc.type.lower() in top_plot_types:
-            ax_pos.plot(datenums, y_axis, label=bc_name)
-        else:
-            ax_neg.plot(datenums, y_axis, label=bc_name)
+        if bc_name in account_list:
+            y_axis = [_get_single_value(_bc, date) for date in dates]
+            datenums = md.date2num([date.date() for date in dates])
+            if _bc.type.lower() in top_plot_types:
+                ax_pos.plot(datenums, y_axis, label=bc_name)
+            else:
+                ax_neg.plot(datenums, y_axis, label=bc_name)
+
+    for bc_name, _bc in c.totals.items():
+        if bc_name == "Total Money":
+            y_axis = [_get_single_value(_bc,date) for date in dates]
+            datenums = md.date2num([date.date() for date in dates])
+            if _bc.type.lower() in top_plot_types:
+                ax_pos.plot(datenums,y_axis,label=bc_name)
+            else:
+                ax_neg.plot(datenums,y_axis,label=bc_name)
 
     _format_axis([ax_pos, ax_neg])
     fig.suptitle("Value of all Accounts")
