@@ -13,8 +13,8 @@ CHECK_DATE_FORMATS = ["%d-%m-%y",
                       "%d-%b-%y",
                       "%d-%b-%Y"]
 OUTPUT_DATE_FORMAT = "%d-%b-%Y"
-DATA_DIRECTORY = os.path.join(os.getcwd(), "files")
-SAVE_FILE_NAME = "test_data1.csv"
+DATA_DIRECTORY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "files")
+SAVE_FILE_NAME = "latest_data.csv"
 
 
 class BankAccount(object):

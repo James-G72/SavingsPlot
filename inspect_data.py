@@ -145,7 +145,8 @@ def _add_account(c):
             while True:
                 value_resp = input(f"What was the value of {account_name} on {date.strftime(OUTPUT_DATE_FORMAT)}? "
                                    f"(if account was not active at that time, just hit enter): ")
-                if not value_resp.isdigit() and value_resp != "":
+                will_float = sum([x.isdigit() for x in value_resp]) == len(value_resp) - 1 and "." in value_resp
+                if not value_resp.isdigit() and not will_float and value_resp != "":
                     print(f"{value_resp} is not a valid account value. Retrying")
                 else:
                     break
