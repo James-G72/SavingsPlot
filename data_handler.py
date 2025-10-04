@@ -84,7 +84,10 @@ class BankAccount(object):
         :return: None
         """
         for date in self.history.keys():
-            print(f"    {date} : {self.history[date]}")
+            v = self.history[date]
+            if v == "":
+                v = 0
+            print("    {} : £{:.2f}".format(date, float(v)))
 
 
 
@@ -170,6 +173,9 @@ class Context(object):
         for key in self.all_accounts.keys():
             real_entries = [x for x in self.all_accounts[key].history.items() if x[1] != ""]
             print(f"    {key}: {len(real_entries)}")
+        print("Calculated Totals:")
+        for key in self.totals.keys():
+            print("    {}: £{:.2f}".format(key, self.totals[key].get_value_on_date(self.all_dates[-1])))
         print("Dates span from {} to {}. ({:.2f} years)".format(
             dt.datetime.strftime(min(self.all_dates), OUTPUT_DATE_FORMAT),
             dt.datetime.strftime(max(self.all_dates), OUTPUT_DATE_FORMAT),
@@ -183,12 +189,14 @@ class Context(object):
         :param interp: If the date is not preset, should one be interpolated.
         :return:
         """
-        print(f"Reporting all bank accounts for {date.strftime(OUTPUT_DATE_FORMAT)}:")
         for n, _bc in self.all_accounts.items():
             v = _bc.get_value_on_date(date)
             t = _bc.type
             # TODO use padding to make this neat
-            print(f"    {n} ({t}) - £{v}")
+            if v == "":
+                v = 0
+            print("    {} ({}) - £{:.2f}".format(n, t, float(v)))
+        print("        Total Money - £{:.2f}".format(self.totals['Total Money'].get_value_on_date(date)))
 
     def full_report(self):
         """

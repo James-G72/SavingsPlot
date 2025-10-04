@@ -19,6 +19,99 @@ def parse_args():
     return parser.parse_args()
 
 
+def print_context(context):
+    """
+    Allow for the user to interact with some print options.
+    :param context: Context object to be printed.
+    :return: None
+    """
+    while True:
+        print("   ---   Print Mode  ---")
+        while True:
+            print("You have the following options:")
+            # Note that options are displayed starting from 1.
+            for idx, option in enumerate(PRINT_OPTIONS):
+                print(f"    ({idx+1}) - {option}")
+            resp = input("Please select an option using its list number: ")
+            if not resp.isdigit():
+                print(f"    Value '{resp}' is not a digit. Retrying.")
+            elif int(resp) > idx + 1:
+                print(f"    Value {int(resp)} exceeds the list length. Retrying.")
+            elif int(resp) <= 0:
+                print(f"    Value {int(resp)} is negative. Retrying.")
+            else:
+                break
+                # TODO this might need to be thought through more. Else seems weird
+        # Exiting the top loop, we can now perform the edit function selected
+        print("")
+        PRINT_FUNCTIONS[int(resp)-1](context)
+
+        # Do we want to do anything else?
+        resp = validate_user_input_list("\nDo you want to print any other information in this session? (y/n): ",
+                                        ["y","n"])
+        if resp.lower() == "n":
+            break
+
+    return context
+
+
+def _print_account(c):
+    """
+    Print data for a single account.
+    :param c: Context object
+    :return: None
+    """
+    print("   ---  Print an Account  ---\n")
+    print("The bank accounts currently loaded are:")
+    for bc_name in c.all_accounts.keys():
+        print(f"    {bc_name}")
+    print(f"    Total Money")
+    options = [x for x in c.all_accounts.keys()]
+    options.append("Total Money")
+    account_name = validate_user_input_list("\nWhat is the name of the account to be printed?: ", options)
+
+    if account_name.lower() == "total money":
+        c.totals["Total Money"].print_status()
+    else:
+        for key in c.all_accounts.keys():
+            if key.lower() == account_name.lower():
+                c.all_accounts[account_name].print_status()
+
+
+
+def _print_date(c):
+    """
+    Print data for a single date.
+    :param c: Context object
+    :return: None
+    """
+    print("   ---  Print a Date  ---\n")
+    while True:
+        print("The dates currently loaded are:")
+        for date in c.all_dates:
+            print(f"    {date.strftime(OUTPUT_DATE_FORMAT)}")
+        target_date = double_check_user_input("Which date would you like to print? (please use format 01-Jan-1990): ")
+        if target_date in [x.strftime(OUTPUT_DATE_FORMAT) for x in c.all_dates]:
+            break
+        else:
+            print("Invalid date entered. Retrying")
+    target_date = dt.datetime.strptime(target_date, OUTPUT_DATE_FORMAT)
+    c.date_report(target_date)
+
+
+def _print_all(c):
+    """
+    Printall data in the context.
+    :param c: Context object
+    :return: None
+    """
+    print("   ---  Print All Data  ---\n")
+    for date in c.all_dates:
+        print(f"    ---  {date.strftime(OUTPUT_DATE_FORMAT)}  ---")
+        c.date_report(date)
+        print("")
+
+
 def edit_context(context):
     """
     Allow for the Context instance to be manually edited by the user on run_time
@@ -380,6 +473,8 @@ def exit_programme(context, save_path, overwrite_save=False):
 # Defining a list of functions now that they have been created
 EDIT_OPTIONS = ["Add Account", "Add Date", "Remove Account", "Remove Date", "Edit Single Value"]
 EDIT_FUNCTIONS = [_add_account, _add_date, _remove_account, _remove_date, _edit_single_value]
+PRINT_OPTIONS = ["Print Account", "Print Date", "Print All"]
+PRINT_FUNCTIONS = [_print_account, _print_date, _print_all]
 
 
 def main(args):
@@ -401,7 +496,7 @@ def main(args):
         assert os.path.exists(args.target), f"{args.target} is an invalid filepath. Cannot update."
         fullContext.update_from_file(args.target)
     elif args.action == "print":
-        fullContext.full_report()
+        print_context(fullContext)
     elif args.action == "edit":
         fullContext = edit_context(fullContext)
 
