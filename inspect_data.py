@@ -78,7 +78,6 @@ def _print_account(c):
                 c.all_accounts[account_name].print_status()
 
 
-
 def _print_date(c):
     """
     Print data for a single date.
@@ -231,7 +230,8 @@ def _add_account(c):
 
         account_type = validate_user_input_list("What type of account is it?: ",ACCOUNT_TYPES)
 
-        _bc = BankAccount(account_name, account_type)
+        # It is not possible to add an account that is not currently relevant
+        _bc = BankAccount(account_name, account_type, 1)
         # Get a value for the account for all dates
 
         for date in c.all_dates:
@@ -271,17 +271,24 @@ def _add_date(c):
         while True:
             new_date_str = double_check_user_input("What is the date to be added? (please use format 01-Jan-1990): ")
             try:
-                new_date = dt.datetime.strptime(new_date_str, OUTPUT_DATE_FORMAT)
-                break
+                # I got sick of typing the date when it is always today
+                if new_date_str == "today":
+                    new_date = dt.datetime.today()
+                    new_date_str = new_date.strftime(OUTPUT_DATE_FORMAT)
+                    break
+                else:
+                    new_date = dt.datetime.strptime(new_date_str, OUTPUT_DATE_FORMAT)
+                    break
             except:
                 print(f"{new_date_str} cannot be passed using datetime format {OUTPUT_DATE_FORMAT}. Retrying")
 
         # Iterate through all bank accounts to add a value for that date
         temp_value_store = {}
         for bc_name in c.all_accounts.keys():
-            bc_value = validate_user_input_types(f"What was the value of {bc_name} on {new_date_str}?: ",
-                                                 [int, float, str])
-            temp_value_store[bc_name] = bc_value
+            if c.all_accounts[bc_name].relevance:
+                bc_value = validate_user_input_types(f"What was the value of {bc_name} on {new_date_str}?: ",
+                                                     [int, float, str])
+                temp_value_store[bc_name] = bc_value
 
         print(f"Please check the values and dates for {new_date_str}:")
         for n, v in temp_value_store.items():
@@ -289,7 +296,7 @@ def _add_date(c):
         check_resp = validate_user_input_list("\nAre the above details correct? (y/n): ",["y","n"])
         if check_resp.lower() == "y":
             # TODO Unless something changes, we will want to move the 3 lines below into a Context function to ensure date is appended.
-            for bc_name in c.all_accounts.keys():
+            for bc_name in c.temp_value_store.keys():
                 c.all_accounts[bc_name].add_entry(temp_value_store[bc_name], new_date)
             c.all_dates.append(new_date)
             print(f"\nNew date: {new_date_str} added successfully.")

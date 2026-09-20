@@ -13,25 +13,30 @@ CHECK_DATE_FORMATS = ["%d-%m-%y",
                       "%d-%b-%y",
                       "%d-%b-%Y"]
 OUTPUT_DATE_FORMAT = "%d-%b-%Y"
+DEFAULT_CURRENCY = "GBP"
 DATA_DIRECTORY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "files")
 SAVE_FILE_NAME = "latest_data.csv"
+# First there columns of the csv are name, type and relevance, then  dates start
+DAT_START_COL = 3
 
 
 class BankAccount(object):
     """
     A class that contains information about a single bank account.
     """
-    def __init__(self, account_name, account_type, currency="GBP"):
+    def __init__(self, name, type, relevance, currency="GBP"):
         """
         Each instance has a name and an assumed currency of GBP
-        :param account_name: Display name for the account in any summaries and graphs
-        :param account_type: Type of bank account from ACCOUNT_TYPES.
+        :param name: Display name for the account in any summaries and graphs
+        :param type: Type of bank account from ACCOUNT_TYPES.
+        :param relevance: bool of whether the account is relevant.
         :param currency: Currency to be associated with any values.
         """
-        assert account_type.lower() in ACCOUNT_TYPES, (f"Invalid account type {account_type} passed for {account_name}./"
+        assert type.lower() in ACCOUNT_TYPES, (f"Invalid account type {type} passed for {name}./"
                                                f"Account types must be from: {ACCOUNT_TYPES}")
-        self.name = account_name.title()
-        self.type = account_type.title()
+        self.name = name.title()
+        self.type = type.title()
+        self.relevance = relevance
         self.currency = currency
 
         # Historical values over time are stored in a dictionary
@@ -80,15 +85,30 @@ class BankAccount(object):
 
     def print_status(self):
         """
-        Report the intertnal state of the bank account.
+        Report the internal state of the bank account.
         :return: None
         """
+        # Establishing the last relevant value
+        if not self.relevance:
+            last_date = None
+            for date in self.history.keys():
+                if self.history[date] == "" and last_date is not None:
+                    break
+                elif self.history[date] != "":
+                    last_date = date
+        else:
+            last_date = self.history.keys()[-1]
+
+        delay_1_value = False
         for date in self.history.keys():
+            if date == last_date and not delay_1_value:
+                delay_1_value = True
+            elif delay_1_value:
+                break
             v = self.history[date]
             if v == "":
                 v = 0
             print("    {} : £{:.2f}".format(date, float(v)))
-
 
 
 class Context(object):
@@ -100,6 +120,7 @@ class Context(object):
         """
         Establish programme context
         :param historical: absolute filepath to a previous data export
+        :param populate: boolean flag to prevent the file being loaded to memory
         """
         # A tag to track if there is any change during runtime
         self.updated_this_run = False
@@ -114,24 +135,27 @@ class Context(object):
         """
         A general function for unpacking a csv of the expected format into
         :param abs_path: Absolute path to the csv
-        :return: dates (list of dates), data (dict of account values)
+        :return: dates (list of dates), temp_data (dict of account values), temp_relevance (dict of account bools)
         """
         try:
             with open(abs_path, newline="") as csv_file:
                 read_in = csv.reader(csv_file, delimiter=",")
                 temp_data = {}
                 temp_types = {}
+                temp_relevance = {}
                 for idx, row in enumerate(read_in):
                     if idx == 0:
-                        dates = row[2:]
+                        dates = row[DAT_START_COL:]
                     else:
-                        temp_data[row[0]] = row[2:]
                         temp_types[row[0]] = row[1]
+                        temp_relevance[row[0]] = bool(int(row[2]))
+                        temp_data[row[0]] = row[DAT_START_COL:]
+
         except:
             print(f"Something is wrong with {abs_path}")
             # TODO make this handle exceptions properly
 
-        return dates, temp_data, temp_types
+        return dates, temp_data, temp_types, temp_relevance
 
     def _load_historical(self, abs_path):
         """
@@ -139,9 +163,9 @@ class Context(object):
         :param abs_path: path to a data set of financial data
         :return: None
         """
-        dates, temp_accout_data, temp_account_types = self._unpack_csv(abs_path)
+        dates, temp_accout_data, temp_account_types, temp_account_relevances = self._unpack_csv(abs_path)
         for account in temp_accout_data.keys():
-            _bc = BankAccount(account, temp_account_types[account], "GBP")
+            _bc = BankAccount(account, temp_account_types[account], temp_account_relevances[account], DEFAULT_CURRENCY)
             for date, value in zip(dates, temp_accout_data[account]):
                 _bc.add_entry(value, date)
 
@@ -219,6 +243,7 @@ class Context(object):
         _bc = self.all_accounts[account_key]
         new_row.append(account_key)
         new_row.append(_bc.type)
+        new_row.append(_bc.relevance)
         for date_str in dates:
             if date_str in _bc.history.keys():
                 new_row.append(_bc.history[date_str])
@@ -243,8 +268,8 @@ class Context(object):
         # TODO make sure that the dates are in chronological order
         dates_out = [dt.datetime.strftime(x, OUTPUT_DATE_FORMAT) for x in self.all_dates]
         rows_out = {}
-        for key in self.all_accounts.keys():
-            rows_out[key] = self._build_csv_row(key, dates_out)
+        for bc_name in self.all_accounts.keys():
+            rows_out[bc_name] = self._build_csv_row(bc_name, dates_out)
 
         try:
             with open(full_path, "w", newline="") as csv_file:
@@ -271,8 +296,8 @@ class Context(object):
             else:
                 return float(str)
 
-        total_money_bc = BankAccount("Total Money", "Savings")
-        total_worth_bc = BankAccount("Total Worth", "Savings")
+        total_money_bc = BankAccount("Total Money", "Savings", 1)
+        total_worth_bc = BankAccount("Total Worth", "Savings", 1)
         for date in self.all_dates:
             pos_value = 0
             neg_value = 0
