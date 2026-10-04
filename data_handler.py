@@ -97,7 +97,7 @@ class BankAccount(object):
                 elif self.history[date] != "":
                     last_date = date
         else:
-            last_date = self.history.keys()[-1]
+            last_date = list(self.history.keys())[-1]
 
         delay_1_value = False
         for date in self.history.keys():
@@ -148,7 +148,7 @@ class Context(object):
                         dates = row[DAT_START_COL:]
                     else:
                         temp_types[row[0]] = row[1]
-                        temp_relevance[row[0]] = bool(int(row[2]))
+                        temp_relevance[row[0]] = row[2] == "TRUE"
                         temp_data[row[0]] = row[DAT_START_COL:]
 
         except:
@@ -274,7 +274,7 @@ class Context(object):
         try:
             with open(full_path, "w", newline="") as csv_file:
                 write_out = csv.writer(csv_file, delimiter=",")
-                write_out.writerow(["Account", "Type"] + dates_out)
+                write_out.writerow(["Account", "Type", "Relevance"] + dates_out)
                 for acc in self.all_accounts.keys():
                     write_out.writerow(rows_out[acc])
         except:

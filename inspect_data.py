@@ -136,7 +136,7 @@ def edit_context(context):
                 # TODO this might need to be thought through more. Else seems weird
         # Exiting the top loop, we can now perform the edit function selected
         print("")
-        EDIT_FUNCTIONS[int(resp)-1](context)
+        context = EDIT_FUNCTIONS[int(resp)-1](context)
 
         # Do we want to do anything else?
         resp = validate_user_input_list("\nDo you want to make any other edits in this session? (y/n): ",
@@ -289,6 +289,8 @@ def _add_date(c):
                 bc_value = validate_user_input_types(f"What was the value of {bc_name} on {new_date_str}?: ",
                                                      [int, float, str])
                 temp_value_store[bc_name] = bc_value
+            else:
+                temp_value_store[bc_name] = ""
 
         print(f"Please check the values and dates for {new_date_str}:")
         for n, v in temp_value_store.items():
@@ -296,7 +298,7 @@ def _add_date(c):
         check_resp = validate_user_input_list("\nAre the above details correct? (y/n): ",["y","n"])
         if check_resp.lower() == "y":
             # TODO Unless something changes, we will want to move the 3 lines below into a Context function to ensure date is appended.
-            for bc_name in c.temp_value_store.keys():
+            for bc_name in c.all_accounts.keys():
                 c.all_accounts[bc_name].add_entry(temp_value_store[bc_name], new_date)
             c.all_dates.append(new_date)
             print(f"\nNew date: {new_date_str} added successfully.")
